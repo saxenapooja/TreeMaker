@@ -333,6 +333,10 @@ public:
   unsigned int muonStripLayers;
   float muonChi2OverNdof;
 
+  float ditauVisMass;
+  float ditauPt;
+  float ditauEta;
+  
   float tauOSPt;
   float tauOSEta;
   float tauOSPhi;
@@ -491,7 +495,7 @@ MyAnalysis::MyAnalysis(const Config& config) : Analyse(), currun(0), curlumi(0),
   if(ENABLE_MATCHING && !EARLY_MATCHING)   cutOSTauMatching = cutflow.AddCut("OSTau Matching");
   cutOSTauPt                                                 = cutflow.AddCut("OSTau pT");
   cutOSTauEta                                                = cutflow.AddCut("OSTau eta");
-  cutOSTauCharge                                             = cutflow.AddCut("OSTau charge"); 
+  //  cutOSTauCharge                                             = cutflow.AddCut("OSTau charge"); 
   cutOSTauChHadCandPt                                        = cutflow.AddCut("OSTau leadChHadCand pt");
   cutOSTauDecayModeFinding                                   = cutflow.AddCut("OSTau Decay Mode Finding");
   cutOSTauIsolation                                          = cutflow.AddCut(TString::Format("OSTau Isolation%s", OSTauWP.isolation_hr_name()));
@@ -503,7 +507,7 @@ MyAnalysis::MyAnalysis(const Config& config) : Analyse(), currun(0), curlumi(0),
   if(ENABLE_MATCHING && !EARLY_MATCHING)    cutSSTauMatching = cutflow.AddCut("SSTau Matching");
   cutSSTauPt                                                 = cutflow.AddCut("SSTau pT");
   cutSSTauEta                                                = cutflow.AddCut("SSTau eta");
-  cutSSTauCharge                                             = cutflow.AddCut("SSTau charge");
+  //  cutSSTauCharge                                             = cutflow.AddCut("SSTau charge");
   cutSSTauChHadCandPt                                        = cutflow.AddCut("SSTau leadChHadCand pt");
   cutSSTauDecayModeFinding                                   = cutflow.AddCut("SSTau Decay Mode Finding");
   cutSSTauIsolation                                          = cutflow.AddCut(TString::Format("SSTau Isolation%s", SSTauWP.isolation_hr_name()));
@@ -560,20 +564,25 @@ MyAnalysis::MyAnalysis(const Config& config) : Analyse(), currun(0), curlumi(0),
   syncTree->Branch("lumi", &lumi, "lumi/i");
   syncTree->Branch("event", &event, "event/i");
 
-  syncTree->Branch("muonPt", &muonPt, "muonPt/F");
-  syncTree->Branch("muonEta", &muonEta, "muonEta/F");
-  syncTree->Branch("muonPhi", &muonPhi, "muonPhi/F");
-  syncTree->Branch("muonIso", &muonIso, "muonIso/F");
-  syncTree->Branch("muonCharge", &muonCharge, "muonCharge/I");
-  syncTree->Branch("muonGlobal", &muonGlobal, "muonGlobal/O");
-  syncTree->Branch("muonTracker", &muonTracker, "muonTracker/O");
-  syncTree->Branch("muonPF", &muonPF, "muonPF/O");
-  syncTree->Branch("muonPixelHits", &muonPixelHits, "muonPixelHits/i");
-  syncTree->Branch("muonNumStations", &muonNumStations, "muonNumStations/i");
-  syncTree->Branch("muonNumChamberHits", &muonNumChamberHits, "muonNumChamberHits/i");
-  syncTree->Branch("muonPixelLayers", &muonPixelLayers, "muonPixelLayers/i");
-  syncTree->Branch("muonStripLayers", &muonStripLayers, "muonStripLayers/i");
-  syncTree->Branch("muonChi2OverNdof", &muonChi2OverNdof, "muonChi2OverNdof/F");
+//   syncTree->Branch("muonPt", &muonPt, "muonPt/F");
+//   syncTree->Branch("muonEta", &muonEta, "muonEta/F");
+//   syncTree->Branch("muonPhi", &muonPhi, "muonPhi/F");
+//   syncTree->Branch("muonIso", &muonIso, "muonIso/F");
+//   syncTree->Branch("muonCharge", &muonCharge, "muonCharge/I");
+//   syncTree->Branch("muonGlobal", &muonGlobal, "muonGlobal/O");
+//   syncTree->Branch("muonTracker", &muonTracker, "muonTracker/O");
+//   syncTree->Branch("muonPF", &muonPF, "muonPF/O");
+//   syncTree->Branch("muonPixelHits", &muonPixelHits, "muonPixelHits/i");
+//   syncTree->Branch("muonNumStations", &muonNumStations, "muonNumStations/i");
+//   syncTree->Branch("muonNumChamberHits", &muonNumChamberHits, "muonNumChamberHits/i");
+//   syncTree->Branch("muonPixelLayers", &muonPixelLayers, "muonPixelLayers/i");
+//   syncTree->Branch("muonStripLayers", &muonStripLayers, "muonStripLayers/i");
+//   syncTree->Branch("muonChi2OverNdof", &muonChi2OverNdof, "muonChi2OverNdof/F");
+
+
+  syncTree->Branch("ditauVisMass", &ditauVisMass , "ditauVisMass/F");
+  syncTree->Branch("ditauPt"     , &ditauPt      , "ditauPt/F");
+  syncTree->Branch("ditauEta"    , &ditauEta     , "ditauEta/F");
 
   syncTree->Branch("tauOSPt", &tauOSPt, "tauOSPt/F");
   syncTree->Branch("tauOSEta", &tauOSEta, "tauOSEta/F");
@@ -1158,10 +1167,9 @@ Int_t MyAnalysis::AnalyzeEvent()
 		      const TauCand *OSTau_ = ditau.OStau;
 		      
 		      if(doublet.size() < 2 ) continue;
-		      if(doDebug) cout<<"          good doublet is selected"<< endl;
+		      if(doDebug) cout<<"          Good doublet is selected"<< endl;
 		      
 		      const DiTau* best_doublet = NULL;
-		      //cout<<"size :"<< doublet.size() << endl;
 		      for(unsigned int i = 0; i < doublet.size(); ++i)
 			{
 			  if(!best_doublet ||  doublet[i].OStau->Pt() * doublet[i].SStau->Pt() > best_doublet->OStau->Pt() * best_doublet->SStau->Pt())
@@ -1175,7 +1183,7 @@ Int_t MyAnalysis::AnalyzeEvent()
 		      if(doDebug) cout<<" BEST_DOUBLET is about to be SELECTED "<< endl;
 		      //const int FINAL_REGIONS = Cutflow_FinalSelection(OSTau, SSTau, SSTAU_REGIONS);
 		      const int FINAL_REGIONS = SSTAU_REGIONS; //Cutflow_FinalSelection(*best_doublet->OStau, *best_doublet->SStau, SSTAU_REGIONS);
-		      if(doDebug)		    cout<<"FINAL_RGIONS "<< FINAL_REGIONS << endl;
+		      if(doDebug)   cout<<"FINAL_RGIONS "<< FINAL_REGIONS << endl;
 		      
 		      if(!FINAL_REGIONS) continue;
 		      if( (FINAL_REGIONS - 1) != 0 ) continue;
@@ -1188,8 +1196,6 @@ Int_t MyAnalysis::AnalyzeEvent()
 		      finaldoublet.push_back(selected_ditau);  //vector filling the ditau event
 		      if(doDebug)    cout<<"@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ TREE ENTRY IS BEING FILLED"<< endl;
 		      
-		      //     vSubTauPt_->Fill(selected_ditau.OStau->Pt());//, infos);
-		      
 		      FillHistogramsFromDoublets(finaldoublet);
 		    } //  for(unsigned int k = 0; k < NumTaus(); ++k) if(j != k)
 		} // for(unsigned int j = 0; j < NumTaus(); ++j)
@@ -1197,11 +1203,11 @@ Int_t MyAnalysis::AnalyzeEvent()
 	} // if(!ENABLE_MATCHING || !EARLY_MATCHING || haveEarlyMatch)
     } //  if(OK_Trigger)
   
-    //// fill histograms
-    // FillHistogramsFromTriplets(triplets    , false);
-    // FillHistogramsFromTriplets(triplets_mva, true );
-    // FillHistograms(finaldoublet);
-    // cutflow.GetCutflow("Signal")->Print();
+  //// fill histograms
+  // FillHistogramsFromTriplets(triplets    , false);
+  // FillHistogramsFromTriplets(triplets_mva, true );
+  // FillHistograms(finaldoublet);
+  // cutflow.GetCutflow("Signal")->Print();
   
 #if 0
   // WZ if(Number() == 711216|| Number() == 1412003)
@@ -1209,18 +1215,18 @@ Int_t MyAnalysis::AnalyzeEvent()
   //if(Number() == 1692418 || Number() == 1554907 || Number() == 2126397 || Number() == 459336 || Number() == 638573 || Number() == 869633 || Number() == 1155256 || Number() == 1953408 || Number() == 1399060)
   //if(Number() == 5913|| Number() == 34236|| Number() == 197625|| Number() == 51992|| Number() == 37623|| Number() == 89391|| Number() == 51073|| Number() == 35199|| Number() == 2524|| Number() == 49537|| Number() == 183987|| Number() == 110767|| Number() == 180225|| Number() == 9940|| Number() == 32660|| Number() == 36341|| Number() == 128089)
   if( Number() == 73416 || Number() == 75218 || Number() == 75510 || Number() == 76686 || Number() == 76879 || Number() == 76953 || Number() == 80117 || Number() == 80250)
-  {
-    const std::string trigname = GetTriggerSelection("TauTrigger")->GetTriggerName();
-
-    std::cout << "Event " << Run() << ":" << LumiBlock() << ":" << Number() << ":\n  ";
-    cutflow.GetCutflow("Signal")->Print();
-    std::cout << "  Trigger=" << trigname << std::endl;
-    std::cout << "  MET=" << MET().Et() << ", phi=" << MET().Phi() << std::endl;
-
+    {
+      const std::string trigname = GetTriggerSelection("TauTrigger")->GetTriggerName();
+      
+      std::cout << "Event " << Run() << ":" << LumiBlock() << ":" << Number() << ":\n  ";
+      cutflow.GetCutflow("Signal")->Print();
+      std::cout << "  Trigger=" << trigname << std::endl;
+      std::cout << "  MET=" << MET().Et() << ", phi=" << MET().Phi() << std::endl;
+      
     std::cout << "  Triplets: " << std::endl;
     for(unsigned int i = 0; i < triplets.size(); ++i)
       std::cout << "    Triplet " << i << ": muPt=" << Muons(triplets[i].lep).Pt() << ", tauOSPt=" << triplets[i].OStau->Pt() << ", tauSSPt=" << triplets[i].SStau->Pt() << ", region=" << triplets[i].region << ", mvaValue=" << triplets[i].mvaValue << ", mass=" << (triplets[i].OStau->p4 + triplets[i].SStau->p4).M() << std::endl;
-
+    
     std::cout << "  Muons: " << std::endl;
     for(unsigned int i = 0; i < NumMuons(); ++i)
       std::cout << "    Muon " << i << ": pT=" << Muons(i).Pt() << ", eta=" << Muons(i).Eta() << ", phi=" << Muons(i).Phi() << ", isolation=" << Muons(i).PFIsoR4RelDB() << " (charged=" << Muons(i).PFIsoR4ChargedHad() << ", neutral=" << Muons(i).PFIsoR4NeutralHad() << ", gamma=" << Muons(i).PFIsoR4Photon() << ", PU=" << Muons(i).PFIsoR4SumPUPt() << "), Dxy=" << Muons(i).InnerTrack().Dxy() << ", Dz=" << Muons(i).InnerTrack().Dz() << ", NumStations=" << Muons(i).NumStations() << ", NumChambers=" << Muons(i).NumChamberHits() << ", Chi2OverNdof=" << Muons(i).Chi2OverNdof() << ", NPixelHits=" << Muons(i).InnerTrack().NPixelHits() << std::endl;
@@ -1237,14 +1243,14 @@ Int_t MyAnalysis::AnalyzeEvent()
         std::cout << "    Jet " << i << ": pT=" << AK5PFJets(i).Pt() << ", eta=" << AK5PFJets(i).Eta() << ", phi=" << AK5PFJets(i).Phi() << ", btag=" << AK5PFJets(i).combinedSecondaryVertexBJetTags() << std::endl;
   }
 #endif
-
+  
   cutflow.FinishEvent();
  
 #if 0
   if(false) //Number() == 149833) //false) //Number() == 172415)
     for(unsigned int i = 0; i < NumTaus(); ++i)
       std::cout << "Tau " << i << ": " << Taus(i).Pt() << ", " << Taus(i).Eta() << ", " << Taus(i).Phi() << ", decay mode: " << Taus(i).TauDiscriminator("decayModeFinding") << std::endl;
-
+  
   if(Number() == 42580 || Number() == 168440)
   {
     std::cout << Number() << ", in file " << GetCurrentFileName() << ":" << std::endl;
@@ -1438,7 +1444,7 @@ int main(int argc, char* argv[])
   vimtrigger.push_back("HLT_DoubleMediumIsoPFTau35_Trk1_eta2p1_v*");
   ana.AddTriggerSelection("TauTrigger", vimtrigger);
   ana.GetTriggerSelection("TauTrigger")->PrintInfo();
-  ana.Loop(0, 1000);
+  ana.Loop(0, 1000); //0, 30000);
 } //int main(int argc, char* argv[])
 
 
@@ -1520,8 +1526,8 @@ int MyAnalysis::Cutflow_OSTau(const TauCand& OStau, int regions)
   if( !( TMath::Abs(OStau.Eta())                   < 2.1          ))   return 0; cutflow.Pass(cutOSTauEta             , regions);
   if(doDebug)    cout<<" OStau Eta pass - check! " << OStau.Eta() <<", " << regions << endl;
 
-  if( !( SAME_SIGN_TAU_PAIRS || OStau.Charge       < 0            ))   return 0; cutflow.Pass(cutOSTauCharge          , regions);
-  if(doDebug)    cout<<" OStau Charge pass - check! " << OStau.Charge <<", "<< regions << endl;
+//   if( !( SAME_SIGN_TAU_PAIRS || OStau.Charge       < 0            ))   return 0; cutflow.Pass(cutOSTauCharge          , regions);
+//   if(doDebug)    cout<<" OStau Charge pass - check! " << OStau.Charge <<", "<< regions << endl;
 
   if( !(OStau.leadpfchargedhadrcandpt              > 0            ))   return 0; cutflow.Pass( cutOSTauChHadCandPt    , regions);
 
@@ -1561,9 +1567,9 @@ int MyAnalysis::Cutflow_SSTau(const TauCand& OStau, const TauCand& SStau, int re
   if( !( TMath::Abs(SStau.Eta())                   < 2.1          ))   return 0; cutflow.Pass(cutSSTauEta             , regions);
   if(doDebug)    cout<<" SStau Eta pass - check! " << regions << endl;
 
-  if( !( (!SAME_SIGN_TAU_PAIRS && SStau.Charge     > 0)     ||
-         (SAME_SIGN_TAU_PAIRS && SStau.Charge * OStau.Charge > 0) ))   return 0; cutflow.Pass(cutSSTauCharge          , regions);
-  if(doDebug)    cout<<" SStau Charge pass - check! " << regions << endl;
+  //   if( !( (!SAME_SIGN_TAU_PAIRS && SStau.Charge     > 0)     ||
+  //     (SAME_SIGN_TAU_PAIRS && SStau.Charge * OStau.Charge > 0) ))   return 0; cutflow.Pass(cutSSTauCharge          , regions);
+  //   if(doDebug)    cout<<" SStau Charge pass - check! " << regions << endl;
 
   if( !(SStau.leadpfchargedhadrcandpt              > 0            ))   return 0; cutflow.Pass( cutSSTauChHadCandPt    , regions);
 
@@ -1837,10 +1843,9 @@ void MyAnalysis::FillHistogramsFromDoublets(const std::vector<DiTau>& doublets)
   for(unsigned int i = 0; i < doublets.size(); ++i) 
     {
       best_doublet = &doublets[i];
-      if(doDebug) cout<<" inside doublet_pt2 :"<<  (best_doublet->OStau->Pt() * best_doublet->SStau->Pt()) <<" ttpt2 :"<< (doublets[i].OStau->Pt() * doublets[i].SStau->Pt() ) << endl; 
+      if(doDebug) cout<<" inside doublet_pt2 :"<<  (best_doublet->OStau->Pt() * best_doublet->SStau->Pt()) <<" ttpt2 :"
+		      << (doublets[i].OStau->Pt() * doublets[i].SStau->Pt() ) << endl; 
     }
-  if(doDebug)  cout<<" outside doublet_pt2 :"<<  (best_doublet->OStau->Pt() * best_doublet->SStau->Pt()) <<" ttpt2 :"<< (doublets[0].OStau->Pt() * doublets[0].SStau->Pt() ) << endl;
-
   if(ONLY_BEST_DOUBLET && best_doublet) FillHistograms(*best_doublet, false);//, doublets.size());
 }
 
@@ -1903,18 +1908,18 @@ void MyAnalysis::FillHistograms(const DiTau& ditau, bool mvaCut)
   
   if(doDebug)  cout<<"filling the Event /variables"<< endl;
   // Event
-  if(doDebug)  cout<<"first round"<< endl;
+  if(doDebug)  cout<<"First round"<< endl;
   vNPV.fill(NumGoodPrimVertices(), weight, infos);
   vMET.fill(MET().Et(), weight, infos);
   vMETTYPE1.fill(PFMETTYPE1().Et(), weight, infos);
   //  vNTriplets.fill(n_triplets, weight, infos);
   // Tau
-  const double LeadTauPt = OSTau.Pt() > SSTau.Pt() ? OSTau.Pt() : SSTau.Pt();
-  const double SubTauPt = OSTau.Pt() < SSTau.Pt() ? OSTau.Pt() : SSTau.Pt();
+  const double LeadTauPt  = OSTau.Pt() > SSTau.Pt() ? OSTau.Pt() : SSTau.Pt();
+  const double SubTauPt   = OSTau.Pt() < SSTau.Pt() ? OSTau.Pt() : SSTau.Pt();
   const double LeadTauEta = OSTau.Pt() > SSTau.Pt() ? OSTau.Eta() : SSTau.Eta();
-  const double SubTauEta = OSTau.Pt() < SSTau.Pt() ? OSTau.Eta() : SSTau.Eta();
+  const double SubTauEta  = OSTau.Pt() < SSTau.Pt() ? OSTau.Eta() : SSTau.Eta();
 
-  if(doDebug)  cout<<"second round"<< endl;
+  if(doDebug)  cout<<"Second round"<< endl;
   vLeadTauPt.fill(LeadTauPt, weight, infos);
   vLeadTauEta.fill(LeadTauEta, weight, infos);
   vSubTauPt.fill(SubTauPt, weight, infos);
@@ -1929,7 +1934,7 @@ void MyAnalysis::FillHistograms(const DiTau& ditau, bool mvaCut)
   vSSTauRelIso.fill( (SSTau.IsoNeutralsPt + SSTau.IsoChargedPt + SSTau.IsoGammaPt) / SSTau.Pt(), weight, infos);
 
   // Tau Tau
-  if(doDebug)  cout<<"third round"<< endl;
+  if(doDebug)  cout<<"Third round"<< endl;
   vTauTauVisMass.fill(tautau.M(), weight, infos);
   vTauTauPt.fill(tautau.Pt(), weight, infos);
   vTauTauEta.fill(tautau.Eta(), weight, infos);
@@ -1972,21 +1977,25 @@ void MyAnalysis::FillHistograms(const DiTau& ditau, bool mvaCut)
     lumi = LumiBlock();
     event = Number();
 
-//     muonPt = mu.Pt();
-//     muonEta = mu.Eta();
-//     muonPhi = mu.Phi();
-//     muonIso = mu.PFIsoR4RelDB();
-//     muonCharge = mu.Charge();
-//     muonGlobal = mu.IsGlobal();
-//     muonTracker = mu.IsTracker();
-//     muonPF = mu.IsPF();
-//     muonPixelHits = mu.InnerTrack().NPixelHits();
-//     muonNumStations = mu.NumStations();
-//     muonNumChamberHits = mu.NumChamberHits();
-//     muonPixelLayers = mu.InnerTrack().NPixelLayers();
-//     muonStripLayers = mu.InnerTrack().NStripLayers();
-//     muonChi2OverNdof = mu.Chi2OverNdof();
+    //     muonPt = mu.Pt();
+    //     muonEta = mu.Eta();
+    //     muonPhi = mu.Phi();
+    //     muonIso = mu.PFIsoR4RelDB();
+    //     muonCharge = mu.Charge();
+    //     muonGlobal = mu.IsGlobal();
+    //     muonTracker = mu.IsTracker();
+    //     muonPF = mu.IsPF();
+    //     muonPixelHits = mu.InnerTrack().NPixelHits();
+    //     muonNumStations = mu.NumStations();
+    //     muonNumChamberHits = mu.NumChamberHits();
+    //     muonPixelLayers = mu.InnerTrack().NPixelLayers();
+    //     muonStripLayers = mu.InnerTrack().NStripLayers();
+    //     muonChi2OverNdof = mu.Chi2OverNdof();
 
+    ditauVisMass =  tautau.M()   ;
+    ditauPt      =  tautau.Pt()  ;
+    ditauEta     =  tautau.Eta() ;
+    
     tauOSPt = OSTau.Pt();
     tauOSEta = OSTau.Eta();
     tauOSPhi = OSTau.Phi();
