@@ -1,4 +1,4 @@
-#!/bin/bash
+ #!/bin/bash
 date
 
 ################################################
@@ -6,21 +6,24 @@ date
 ################################################
 
 WORKDIR=/nfs/dust/cms/user/pooja/
+TOOLDIR=$WORKDIR/scratch/plot-macro/
 ANALYSISPATH=$WORKDIR/scratch/plot-macro/tau-hadronic/h2tautau-analysis/
 
-#INPUT FILE
+# INPUT FILE
 COMMONFILEPATH=$WORKDIR/samples/
 FILEPATH=$COMMONFILEPATH/syncEx_tautau_Christian_Oct2014/output_crab/
 FILENAME=$FILEPATH/TTFH_MC_SUSYGluGluToHToTauTau_M-130_8TeV-pythia6-tauola
 
 # LUMI FILE
-LUMIPATH=$ANALYSISPATH/Lumi/new
-LUMIFILE=LUMI_INFO_TTFH_MC_SUSYGluGluToHToTauTau_M-130_8TeV-pythia6-tauola
+LUMIPATH=$TOOLDIR/Lumi/new
+LUMIFILE=$LUMIPATH/LUMI_INFO_TTFH_MC_SUSYGluGluToHToTauTau_M-130_8TeV-pythia6-tauola
 
 # CONFIG FILE
 CONFIGPATH=$ANALYSISPATH/Config
-CONFIGTYPE=$CONFIGPATH/analysis
-CONFIGFILE=$CONFIGTYPE/2012.cfg
+CONFIGDEFAULT="YES"
+CONFIGANALYSIS=$CONFIGPATH/analysis
+CONFIGSKIM=$CONFIGPATH/skim
+CONFIGDEFAULTFILE=$CONFIGTYPE/2012.cfg
 
 GREP[1]="2011.cfg"
 GREP[2]="matching.cfg"
@@ -33,7 +36,7 @@ GREP[8]="fall11_4jets.cfg"
 GREP[9]="highpt_selection.cfg"
 GREP[10]="highpt_selection_notrigger_matching.cfg"
 GREP[11]="new_fakerates.cfg"
-GREP[12]="same-sign-tau-pairs.cfg"
+GREP[12]="summer12_1jets.cfg"
 GREP[13]="summer12_2jets.cfg"
 GREP[14]="summer12_3jets.cfg"
 GREP[15]="summer12_4jets.cfg"
@@ -44,8 +47,12 @@ GREP[19]="conversion_rejection.cfg"
 GREP[20]="all_triplets.cfg"
 GREP[21]="capped_fakerates.cfg"
 GREP[22]="isoonly_fr.cfg"
-GREP[23]="matching.cfg"
-
+GREP[23]="inclusive_fakerates.cfg"
+GREP[24]="one_triplet.cfg"
+GREP[25]="new_fakerates.cfg"
+GREP[26]="highpt_selection_notrigger.cfg"
+GREP[27]="summer12.cfg"
+GREP[28]="same-sign-tau-pairs.cfg"
 
 usage () {
     echo "@@@@@@ Higgs_tau_tau "
@@ -63,9 +70,9 @@ SetupEnv() {
 }
 
 MakeLib() {
-    cd /nfs/dust/cms/user/pooja/scratch/plot-macro/AnalysisTool_WH
+    cd $TOOLDIR/AnalysisTool_WH
     source AnalysisToolUseThis
-    ./configure --prefix=/nfs/dust/cms/user/pooja/scratch/plot-macro/lib_AnalysisTool
+    ./configure --prefix=$TOOLDIR/lib_AnalysisTool
     make
     make install
     echo '@@@@@@@@@@@@@ LIBERARIES ARE BUILD @@@@@@@@@@@@@@@@@@@@@@'
@@ -73,45 +80,38 @@ MakeLib() {
 
 Skim() {
     make -B main_skim
-# test prupose (single sample)
-# ./main_skim ../../Lumi/new/LUMI_INFO_TTFH_MC_GluGluToHToTauTau_M-90_8TeV-powheg-pythia6.root  /nfs/dust/cms/user/pooja/scratch/plot-macro/armin-file/TTFH_MC_GluGluToHToTauTau_M-90_8TeV-powheg-pythia6_*.root /nfs/dust/cms/user/pooja/scratch/plot-macro/tau-hadronic/h2tautau-analysis/Config/skim/common.cfg
-
-# test purpose (huge dataset)
-#    ./main_skim ../../Lumi/new/LUMI_INFO_TTFH_MC_GluGluToHToTauTau_M-125_8TeV-powheg-pythia6.root /nfs/dust/cms/user/pooja/samples/h2tautau-8TeV/TTFH_MC_GluGluToHToTauTau_M-125_8TeV-powheg-pythia6_28*root /nfs/dust/cms/user/pooja/scratch/plot-macro/tau-hadronic/h2tautau-analysis/Config/skim/common.cfg
-#    ./main_skim ../../Lumi/new/LUMI_INFO_TTFH_MC_VBF_HToTauTau_M-125_8TeV-powheg-pythia6.root /nfs/dust/cms/user/pooja/samples/vbf_tautau_reproduce/TTFH_MC_VBF_HToTauTau_M-125_8TeV*root /nfs/dust/cms/user/pooja/scratch/plot-macro/tau-hadronic/h2tautau-analysis/Config/skim/common.cfg
-    ./main_skim ../../Lumi/new/LUMI_INFO_TTFH_MC_VBF_HToTauTau_M-125_8TeV-powheg-pythia6.root /nfs/dust/cms/user/pooja/samples/vbf_tautau_reproduce/TTFH_MC_VBF_HToTauTau_M-125_8TeV-powheg-pythia6_4.root /nfs/dust/cms/user/pooja/scratch/plot-macro/tau-hadronic/h2tautau-analysis/Config/skim/common.cfg
-#    ./main_skim ../../Lumi/new/LUMI_INFO_TTFH_MC_GluGluToHToTauTau_M-125_8TeV-powheg-pythia6.root  TTFH_MC_GluGluToHToTauTau_M-125_8TeV-powheg-pythia6_29.root  /nfs/dust/cms/user/pooja/scratch/plot-macro/tau-hadronic/h2tautau-analysis/Config/skim/common.cfg
+    ./main_skim $LUMIFILE"*.root" $FILENAME"*.root" $CONFIGSKIM/$GREP[18]
 }
 
 
 Main() {
     make -B main
-#    ./main skimmed.root ../../Lumi/new/LUMI_INFO_TTFH_MC_GluGluToHToTauTau_M-125_8TeV-powheg-pythia6.root ../Config/analysis/2012.cfg 
-#    ./main finalskim.root ../../Lumi/new/LUMI_INFO_TTFH_MC_GluGluToHToTauTau_M-90_8TeV-powheg-pythia6.root ../Config/analysis/2012.cfg 
-#    ./main /nfs/dust/cms/user/pooja/samples/vbf_tautau_reproduce/TTFH_MC_VBF_HToTauTau_M-125_*root ../../Lumi/new/LUMI_INFO_TTFH_MC_GluGluToHToTauTau_M-90_8TeV-powheg-pythia6.root ../Config/analysis/2012.cfg 
-#    ./main /nfs/dust/cms/user/pooja/scratch/h2tautau/CMSSW_5_3_9_patch2/src/MyRootMaker/MyRootMaker/test/GluGluToHToTauTau_M-125.root ../../Lumi/new/LUMI_INFO_TTFH_MC_GluGluToHToTauTau_M-90_8TeV-powheg-pythia6.root ../Config/analysis/2012.cfg 
-#    ./main /nfs/dust/cms/user/pooja/scratch/h2tautau/CMSSW_5_3_9_H2Tau/src/MyRootMaker/MyRootMaker/test/VBF_HToTauTau_M-125.root ../../Lumi/new/LUMI_INFO_TTFH_MC_VBF_HToTauTau_M-125_8TeV-powheg-pythia6.root ../Config/analysis/2012.cfg 
-#    ./main /nfs/dust/cms/user/pooja/samples/vbf_tautau_reproduce/TTFH_MC_VBF_HToTauTau_M-125_8TeV-powheg-pythia6_10.root ../../Lumi/new/LUMI_INFO_TTFH_MC_GluGluToHToTauTau_M-90_8TeV-powheg-pythia6.root ../Config/analysis/2012.cfg 
-#    ./main /nfs/dust/cms/user/pooja/samples/vbf_tautau_reproduce/TTFH_MC_VBF_HToTauTau_M-125_*root ../../Lumi/new/LUMI_INFO_TTFH_MC_VBF_HToTauTau_M-125_8TeV-powheg-pythia6.root ../Config/analysis/2012.cfg 
-#    ./main /nfs/dust/cms/user/pooja/scratch/h2tautau/CMSSW_5_3_9_patch2/src/MyRootMaker/MyRootMaker/test/GluGluToHToTauTau_M-125_full.root ../../Lumi/new/LUMI_INFO_TTFH_MC_GluGluToHToTauTau_M-90_8TeV-powheg-pythia6.root ../Config/analysis/2012.cfg 
-#    ./main /nfs/dust/cms/user/pooja/samples/higgs_cp_study/VBF_HToTauTau_M-125_MC_v8_vtxWithBS/GluGluToHToTauTau_M*root ../../Lumi/new/LUMI_INFO_TTFH_MC_VBF_HToTauTau_M-125_8TeV-powheg-pythia6.root ../Config/analysis/2012.cfg 
-#    ./main /nfs/dust/cms/user/pooja/samples/higgs_cp_study/GluGluToHToTauTau_M-125_MC_v8_vtxWithBS/GluGluToHToTauTau_M*root ../../Lumi/new/LUMI_INFO_TTFH_MC_GluGluToHToTauTau_M-90_8TeV-powheg-pythia6.root ../Config/analysis/2012.cfg 
-#    ./main /nfs/dust/cms/user/pooja/samples/higgs_cp_study/SUSYGluGluToHToTauTau_M-120_MC_v8_vtxWithBS/GluGluToHToTauTau_M*root ../../Lumi/new/LUMI_INFO_TTFH_MC_GluGluToHToTauTau_M-90_8TeV-powheg-pythia6.root ../Config/analysis/2012.cfg  
-#    ./main /nfs/dust/cms/user/pooja/samples/higgs_cp_study/DYJetsToLL_M-50_MC_v8_vtxWithBS/GluGluToHToTauTau_M*root ../../Lumi/new/LUMI_INFO_TTFH_MC_DYJetsToLL_M-50_TuneZ2star_8TeV_madgraph.root ../Config/analysis/2012.cfg
-#    ./main /nfs/dust/cms/user/pooja/samples/higgs_cp_study/VBF_HToTauTau_M-125_tauPolarOff_MC_v8_vtxWithBS/GluGluToHToTauTau_M*root ../../Lumi/new/LUMI_INFO_TTFH_MC_VBF_HToTauTau_M-125_8TeV-powheg-pythia6.root ../Config/analysis/2012.cfg
-#    ./main /nfs/dust/cms/user/pooja/samples/higgs_cp_study/GluGluToHToTauTau_M-125_tauPolarOff_MC_v8_vtxWithBS/GluGluToHToTauTau_M*root ../../Lumi/new/LUMI_INFO_TTFH_MC_GluGluToHToTauTau_M-90_8TeV-powheg-pythia6.root ../Config/analysis/2012.cfg 
-#    ./main /nfs/dust/cms/user/pooja/scratch/h2tautau/CMSSW_5_3_14/src/MyRootMaker/MyRootMaker/GluGluToHToTauTau_M-125_full.root ../../Lumi/new/LUMI_INFO_TTFH_MC_GluGluToHToTauTau_M-90_8TeV-powheg-pythia6.root ../Config/analysis/2012.cfg
-#    ./main /nfs/dust/cms/user/pooja/samples/cpStudy_Aug2014/GluGluToHToTauTau_M-125_MC_v8_vtxWithBS_test/GluGluToHToTauTau_M-125*.root ../../Lumi/new/LUMI_INFO_TTFH_MC_GluGluToHToTauTau_M-90_8TeV-powheg-pythia6.root ../Config/analysis/2012.cfg 
 
-#    ./main /nfs/dust/cms/user/pooja/samples/vbf_tautau_reproduce/TTFH_MC_VBF_HToTauTau_M-125_8TeV-powheg-pythia6_4.root ../../Lumi/new/LUMI_INFO_TTFH_MC_VBF_HToTauTau_M-125_8TeV-powheg-pythia6.root ../Config/analysis/2012.cfg
-    ./main $FILEPATH/TTFH_MC_SUSYGluGluToHToTauTau_M-130_8TeV-pythia6-tauola*root   ../Config/analysis/2012.cfg  
+    ## detault config 
+    if [ "$CONFIGDEFAULT" = "YES" ]; then
+	echo '@@@@@@@@@@@@@@@@@@@    USING DEFAULT CONFIG ::' $CONFIGDEFAULTFILE
+	./main $FILENAME"*root" $LUMIFILE"*.root"  $CONFIGDEFAULTFILE
 
+    else
+	## using all config files
+	for ConfigFileIndx in "${GREP[@]}"
+	  do
+	  echo '@@@@@@@@@@@@@@@@@@@    USING FOLLOWING CONFIG ::' $ConfigFileIndx
+           #echo "./main" $FILENAME"*root" $LUMIFILE"*.root" $CONFIGANALYSIS/$ConfigFileIndx
+	  ./main $FILENAME"*root" $LUMIFILE"*.root"   $CONFIGANALYSIS/$ConfigFileIndx
+	  
+	  echo '@@@@@@@@@@@@@ Going to Sleep'
+	  sleep 5
+	  echo ""
+	done
+    fi
+    echo 'EXISTING..'
 }
 
-#if [ $# -lt 1 ]; then
-#    usage
-#    exit 1
-#fi
+if [ $# -lt 1 ]; then
+    usage
+    exit 1
+fi
 
 if [ "$1" = "--help" ]; then
     usage
