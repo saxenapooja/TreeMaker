@@ -339,9 +339,11 @@ public:
   float ditauVisMass;
   float ditauPt;
   float ditauEta;
+  int ditauCharge;
   
   float tauOSPt;
   float tauOSEta;
+  int   tauOSCharge;
   float tauOSPhi;
   float tauOSIso3Hits;
   bool tauOSIso3HitsLoose;
@@ -357,6 +359,7 @@ public:
 
   float tauSSPt;
   float tauSSEta;
+  int   tauSSCharge;
   float tauSSPhi;
   float tauSSIso3Hits;
   bool tauSSIso3HitsLoose;
@@ -586,9 +589,11 @@ MyAnalysis::MyAnalysis(const Config& config) : Analyse(), currun(0), curlumi(0),
   syncTree->Branch("ditauVisMass", &ditauVisMass , "ditauVisMass/F");
   syncTree->Branch("ditauPt"     , &ditauPt      , "ditauPt/F");
   syncTree->Branch("ditauEta"    , &ditauEta     , "ditauEta/F");
+  syncTree->Branch("ditauCharge"    , &ditauCharge     , "ditauCharge/I");
 
   syncTree->Branch("tauOSPt", &tauOSPt, "tauOSPt/F");
   syncTree->Branch("tauOSEta", &tauOSEta, "tauOSEta/F");
+  syncTree->Branch("tauOSCharge", &tauOSCharge, "tauOSCharge/I");
   syncTree->Branch("tauOSPhi", &tauOSPhi, "tauOSPhi/F");
   syncTree->Branch("tauOSIso3Hits", &tauOSIso3Hits, "tauOSIso3Hits/F");
   syncTree->Branch("tauOSIso3HitsLoose", &tauOSIso3HitsLoose, "tauOSIso3HitsLoose/O");
@@ -604,6 +609,7 @@ MyAnalysis::MyAnalysis(const Config& config) : Analyse(), currun(0), curlumi(0),
 
   syncTree->Branch("tauSSPt", &tauSSPt, "tauSSPt/F");
   syncTree->Branch("tauSSEta", &tauSSEta, "tauSSEta/F");
+  syncTree->Branch("tauSSCharge", &tauSSCharge, "tauSSCharge/I");
   syncTree->Branch("tauSSPhi", &tauSSPhi, "tauSSPhi/F");
   syncTree->Branch("tauSSIso3Hits", &tauSSIso3Hits, "tauSSIso3Hits/F");
   syncTree->Branch("tauSSIso3HitsLoose", &tauSSIso3HitsLoose, "tauSSIso3HitsLoose/O");
@@ -1105,7 +1111,6 @@ Int_t MyAnalysis::AnalyzeEvent()
       // ditau selection
       if(!ENABLE_MATCHING || !EARLY_MATCHING || haveEarlyMatch) 
 	{
-
 	  if(doDebug) cout<<"NumDiTaus() :"<< NumDiTaus() << endl;
 	  if(VERTEX_STUDY) {
 	    OStaus.reserve(NumDiTaus());
@@ -2050,12 +2055,14 @@ void MyAnalysis::FillHistograms(const DiTau& ditau, bool mvaCut)
     //     muonStripLayers = mu.InnerTrack().NStripLayers();
     //     muonChi2OverNdof = mu.Chi2OverNdof();
 
-    ditauVisMass =  tautau.M()   ;
-    ditauPt      =  tautau.Pt()  ;
-    ditauEta     =  tautau.Eta() ;
+    ditauVisMass    =  tautau.M()      ;
+    ditauPt         =  tautau.Pt()     ;
+    ditauEta        =  tautau.Eta()    ;
+    ditauCharge     =  (OSTau.Charge) + (SSTau.Charge); 
     
     tauOSPt = OSTau.Pt();
     tauOSEta = OSTau.Eta();
+    tauOSCharge = OSTau.Charge;
     tauOSPhi = OSTau.Phi();
     tauOSIso3Hits = OSTau.Iso3Hits;
     tauOSIso3HitsLoose = OSTau.byLooseCombinedIsolationDeltaBetaCorr3Hits;
@@ -2069,20 +2076,21 @@ void MyAnalysis::FillHistograms(const DiTau& ditau, bool mvaCut)
     tauOSAgainstMuonMedium = OSTau.againstMuonMedium;
     tauOSAgainstMuonTight = OSTau.againstMuonTight;
 
-    tauSSPt = OSTau.Pt();
-    tauSSEta = OSTau.Eta();
-    tauSSPhi = OSTau.Phi();
-    tauSSIso3Hits = OSTau.Iso3Hits;
-    tauSSIso3HitsLoose = OSTau.byLooseCombinedIsolationDeltaBetaCorr3Hits;
-    tauSSIso3HitsMedium = OSTau.byMediumCombinedIsolationDeltaBetaCorr3Hits;
-    tauSSIso3HitsTight = OSTau.byTightCombinedIsolationDeltaBetaCorr3Hits;
-    tauSSAgainstElectronLoose = OSTau.againstElectronLoose;
-    tauSSAgainstElectronLooseMVA3 = OSTau.againstElectronLooseMVA5;
-    tauSSAgainstElectronMediumMVA3 = OSTau.againstElectronMediumMVA5;
-    tauSSAgainstElectronTightMVA3 = OSTau.againstElectronTightMVA5;
-    tauSSAgainstMuonLoose = OSTau.againstMuonLoose;
-    tauSSAgainstMuonMedium = OSTau.againstMuonMedium;
-    tauSSAgainstMuonTight = OSTau.againstMuonTight;
+    tauSSPt = SSTau.Pt();
+    tauSSEta = SSTau.Eta();
+    tauSSCharge = SSTau.Charge;
+    tauSSPhi = SSTau.Phi();
+    tauSSIso3Hits = SSTau.Iso3Hits;
+    tauSSIso3HitsLoose = SSTau.byLooseCombinedIsolationDeltaBetaCorr3Hits;
+    tauSSIso3HitsMedium = SSTau.byMediumCombinedIsolationDeltaBetaCorr3Hits;
+    tauSSIso3HitsTight = SSTau.byTightCombinedIsolationDeltaBetaCorr3Hits;
+    tauSSAgainstElectronLoose = SSTau.againstElectronLoose;
+    tauSSAgainstElectronLooseMVA3 = SSTau.againstElectronLooseMVA5;
+    tauSSAgainstElectronMediumMVA3 = SSTau.againstElectronMediumMVA5;
+    tauSSAgainstElectronTightMVA3 = SSTau.againstElectronTightMVA5;
+    tauSSAgainstMuonLoose = SSTau.againstMuonLoose;
+    tauSSAgainstMuonMedium = SSTau.againstMuonMedium;
+    tauSSAgainstMuonTight = SSTau.againstMuonTight;
 
     met = MET().Pt();
     metPhi = MET().Phi();
