@@ -293,11 +293,14 @@ public:
   // AnalyzeEvent is a virtual function which is called for each event.
   virtual Int_t AnalyzeEvent();
   int  Cutflow_PV(int regions);
+  int  Cutflow_OSTau(const TauCand& OStau, int regions);
+  int  Cutflow_SSTau(const TauCand& OStau, const TauCand& SStau, int regions);
+  int  Cutflow_OSTau_Christian(const TauCand& OStau, int regions);
+  int  Cutflow_SSTau_Christian(const TauCand& OStau, const TauCand& SStau, int regions);
+
   int  Cutflow_Muon(int mu,  int regions);
   int  Cutflow_OSTau(int mu, const TauCand& OStau, int regions);
-  int  Cutflow_OSTau(const TauCand& OStau, int regions);
   int  Cutflow_SSTau(int mu, const TauCand& OStau, const TauCand& SStau, int regions);
-  int  Cutflow_SSTau(const TauCand& OStau, const TauCand& SStau, int regions);
   int  Cutflow_Combined(int mu, const TauCand& OStau, const TauCand& SStau, int regions);
   int  Cutflow_FinalSelection(int mu, const TauCand& OStau, const TauCand& SStau, int regions);
   int  Cutflow_FinalSelection(const TauCand& OStau, const TauCand& SStau, int regions);
@@ -396,7 +399,7 @@ static const int HISTOGRAMS = Variable<TH1D>::SIGNAL
 MyAnalysis::MyAnalysis(const Config& config) : Analyse(), currun(0), curlumi(0),
   ENABLE_PU_REWEIGHTING(config.get<bool>("enable_pu_reweighting")),
   ENABLE_SKIM(config.get<bool>("enable_skim", true)),
-  ENABLE_TRIGGER(config.get<bool>("enable_trigger", false)),
+  ENABLE_TRIGGER(config.get<bool>("enable_trigger", true)),
   ENABLE_MATCHING(config.get<bool>("enable_matching", false)), 
   VERTEX_STUDY(config.get<bool>("vertex_study", true)), 
   EARLY_MATCHING(true),
@@ -408,11 +411,11 @@ MyAnalysis::MyAnalysis(const Config& config) : Analyse(), currun(0), curlumi(0),
   CAPPED_FAKERATES(config.get<bool>("capped_fakerates", false)),
   DATA_ERA(config.get<std::string>("data_era")),
 
-  OSTauWP(config, "tauOS", "loose_3hits", "loose", "loose"), //(config, prefix, default_isolation, antiE, antiMu)
-  SSTauWP(config, "tauSS", "loose_3hits", "loose", "loose"),
+  OSTauWP(config, "tauOS", "tight_mva3oldDMwLT", "loose", "loose"), //(config, prefix, default_isolation, antiE, antiMu)
+  SSTauWP(config, "tauSS", "tight_mva3oldDMwLT", "loose", "loose"),
 
-  LEADTAU_PT_CUT(HIGHPT_SELECTION ? FillInfo::HIGHPT_TAU1_CUT : 40),
-  SUBTAU_PT_CUT(HIGHPT_SELECTION ? FillInfo::HIGHPT_TAU2_CUT : 40),
+  LEADTAU_PT_CUT(HIGHPT_SELECTION ? FillInfo::HIGHPT_TAU1_CUT : 45),
+  SUBTAU_PT_CUT(HIGHPT_SELECTION ? FillInfo::HIGHPT_TAU2_CUT : 45),
   MET_CUT(HIGHPT_SELECTION ? FillInfo::HIGHPT_MET_CUT : 0),
   MASS_CUT(config.get<double>("mass_cut", 85.0)),
 
@@ -496,25 +499,25 @@ MyAnalysis::MyAnalysis(const Config& config) : Analyse(), currun(0), curlumi(0),
   cutOSTauPt                                                 = cutflow.AddCut("OSTau pT");
   cutOSTauEta                                                = cutflow.AddCut("OSTau eta");
   //  cutOSTauCharge                                             = cutflow.AddCut("OSTau charge"); 
-  cutOSTauChHadCandPt                                        = cutflow.AddCut("OSTau leadChHadCand pt");
+  //  cutOSTauChHadCandPt                                        = cutflow.AddCut("OSTau leadChHadCand pt");
   cutOSTauDecayModeFinding                                   = cutflow.AddCut("OSTau Decay Mode Finding");
   cutOSTauIsolation                                          = cutflow.AddCut(TString::Format("OSTau Isolation%s", OSTauWP.isolation_hr_name()));
-  cutOSTauDz                                                 = cutflow.AddCut("OSTau Dz");
-  cutOSTauDxy                                                = cutflow.AddCut("OSTau Dxy");
-  cutOSTauAntiMu                                             = cutflow.AddCut(TString::Format("OSTau AntiMu%s", OSTauWP.antimu_hr_name()));
-  cutOSTauAntiE                                              = cutflow.AddCut(TString::Format("OSTau AntiE%s", OSTauWP.antie_hr_name()));
+  // cutOSTauDz                                                 = cutflow.AddCut("OSTau Dz");
+  //cutOSTauDxy                                                = cutflow.AddCut("OSTau Dxy");
+//    cutOSTauAntiMu                                             = cutflow.AddCut(TString::Format("OSTau AntiMu%s", OSTauWP.antimu_hr_name()));
+//   cutOSTauAntiE                                              = cutflow.AddCut(TString::Format("OSTau AntiE%s", OSTauWP.antie_hr_name()));
 
   if(ENABLE_MATCHING && !EARLY_MATCHING)    cutSSTauMatching = cutflow.AddCut("SSTau Matching");
   cutSSTauPt                                                 = cutflow.AddCut("SSTau pT");
   cutSSTauEta                                                = cutflow.AddCut("SSTau eta");
   //  cutSSTauCharge                                             = cutflow.AddCut("SSTau charge");
-  cutSSTauChHadCandPt                                        = cutflow.AddCut("SSTau leadChHadCand pt");
+  //  cutSSTauChHadCandPt                                        = cutflow.AddCut("SSTau leadChHadCand pt");
   cutSSTauDecayModeFinding                                   = cutflow.AddCut("SSTau Decay Mode Finding");
   cutSSTauIsolation                                          = cutflow.AddCut(TString::Format("SSTau Isolation%s", SSTauWP.isolation_hr_name()));
-  cutSSTauDz                                                 = cutflow.AddCut("SSTau Dz");
-  cutSSTauDxy                                                = cutflow.AddCut("OSTau Dxy");
-  cutSSTauAntiMu                                             = cutflow.AddCut(TString::Format("SSTau AntiMu%s", SSTauWP.antimu_hr_name()));
-  cutSSTauAntiE                                              = cutflow.AddCut(TString::Format("SSTau AntiE%s", SSTauWP.antie_hr_name()));
+//   cutSSTauDz                                                 = cutflow.AddCut("SSTau Dz");
+//   cutSSTauDxy                                                = cutflow.AddCut("OSTau Dxy");
+//   cutSSTauAntiMu                                             = cutflow.AddCut(TString::Format("SSTau AntiMu%s", SSTauWP.antimu_hr_name()));
+//   cutSSTauAntiE                                              = cutflow.AddCut(TString::Format("SSTau AntiE%s", SSTauWP.antie_hr_name()));
 
   //cutDrSSTauMu               = cutflow.AddCut("DeltaR SSTau Muon");
   //cutDrOSTauSSTau            = cutflow.AddCut("DeltaR OSTau SSTau");
@@ -1137,9 +1140,8 @@ Int_t MyAnalysis::AnalyzeEvent()
 		  const TauCand& OSTau = OStaus[j];
 		  if (! OSTau.L1trigger_match ) continue;
 		  
-		  const int OSTAU_REGIONS = Cutflow_OSTau(OSTau, VERTEX_REGIONS);
+		  const int OSTAU_REGIONS = Cutflow_OSTau_Christian(OSTau, VERTEX_REGIONS);
 		  if(doDebug) 		cout<<"OSTAU_REGIONS :"<< OSTAU_REGIONS <<endl;
-		  //	  if( OSTAU_REGIONS == 0) continue;
 		  if(!OSTAU_REGIONS) continue;
 
 		  if(doDebug)    cout<<"@@@@   FIRST TAU SELECTED "<< endl;
@@ -1148,15 +1150,17 @@ Int_t MyAnalysis::AnalyzeEvent()
 		  for(unsigned int k = j+1; k < NumDiTaus(); ++k) if(j != k)
 		    {
 		      if(doDebug)  cout<<"k ------>" <<  k << endl;
+
 		      const TauCand& SSTau = OStaus[k];
 		      if (! SSTau.L1trigger_match ) continue;
 		      
 		      // Avoid double counting in same sign case
-		      // if(SAME_SIGN_TAU_PAIRS && k< j && Cutflow_OSTau(i, SSTau, 0) && Cutflow_SSTau(i, SSTau, OSTau, 0) && Cutflow_Combined(i, SSTau, OSTau, 0)) continue;
+		      // if(SAME_SIGN_TAU_PAIRS && k< j && Cutflow_OSTau(i, SSTau, 0) && Cutflow_SSTau(i, SSTau, OSTau, 0) && 
+		      // Cutflow_Combined(i, SSTau, OSTau, 0)) continue;
 		      if(ENABLE_MATCHING && k != SSTauIndex) continue;                    // enable_matching == false
 		      if(!EARLY_MATCHING) cutflow.Pass(cutSSTauMatching, OSTAU_REGIONS);  // early_matching  == true
 		      
-		      const int SSTAU_REGIONS = Cutflow_SSTau(OSTau, SSTau, OSTAU_REGIONS);
+		      const int SSTAU_REGIONS = Cutflow_SSTau_Christian(OSTau, SSTau, OSTAU_REGIONS);
 		      if(doDebug)    cout<<"SSTAU_REGIONS :"<< SSTAU_REGIONS <<endl;
 		      if(!SSTAU_REGIONS) continue;
 		      
@@ -1174,13 +1178,11 @@ Int_t MyAnalysis::AnalyzeEvent()
 			{
 			  if(!best_doublet ||  doublet[i].OStau->Pt() * doublet[i].SStau->Pt() > best_doublet->OStau->Pt() * best_doublet->SStau->Pt())
 			    best_doublet = &doublet[i];
-			  // cout<<" doublet[i].OStau->Pt() * doublet[i].SStau->Pt() :"<< (doublet[i].OStau->Pt() * doublet[i].SStau->Pt() )<< endl;
-			  // cout<<"best_doublet->OStau->Pt() * best_doublet->SStau->Pt() :"<< (best_doublet->OStau->Pt() * best_doublet->SStau->Pt()) << endl;		
 			}
-		    
+		      
 		      if(best_doublet == NULL) continue;
 		      
-		      if(doDebug) cout<<" BEST_DOUBLET is about to be SELECTED "<< endl;
+		      if(doDebug) cout<<" BEST_DOUBLET is SELECTED "<< endl;
 		      //const int FINAL_REGIONS = Cutflow_FinalSelection(OSTau, SSTau, SSTAU_REGIONS);
 		      const int FINAL_REGIONS = SSTAU_REGIONS; //Cutflow_FinalSelection(*best_doublet->OStau, *best_doublet->SStau, SSTAU_REGIONS);
 		      if(doDebug)   cout<<"FINAL_RGIONS "<< FINAL_REGIONS << endl;
@@ -1437,14 +1439,14 @@ int main(int argc, char* argv[])
 
   if(doDebug)  cout<<"trying to trigger the event"<< endl;
   vector<string> vimtrigger;
-  vimtrigger.push_back("HLT_DoubleMediumIsoPFTau25_Trk5_eta2p1_Jet30_v.*");
-  vimtrigger.push_back("HLT_DoubleMediumIsoPFTau30_Trk5_eta2p1_Jet30_v.*");
-  vimtrigger.push_back("HLT_DoubleMediumIsoPFTau30_Trk1_eta2p1_Jet30_v.*");
+//   vimtrigger.push_back("HLT_DoubleMediumIsoPFTau25_Trk5_eta2p1_Jet30_v.*");
+//   vimtrigger.push_back("HLT_DoubleMediumIsoPFTau30_Trk5_eta2p1_Jet30_v.*");
+//   vimtrigger.push_back("HLT_DoubleMediumIsoPFTau30_Trk1_eta2p1_Jet30_v.*");
   vimtrigger.push_back("HLT_DoubleMediumIsoPFTau35_Trk5_eta2p1_v.*");
   vimtrigger.push_back("HLT_DoubleMediumIsoPFTau35_Trk1_eta2p1_v*");
   ana.AddTriggerSelection("TauTrigger", vimtrigger);
   ana.GetTriggerSelection("TauTrigger")->PrintInfo();
-  ana.Loop(0, 1000); //0, 30000);
+  ana.Loop();
 } //int main(int argc, char* argv[])
 
 
@@ -1529,10 +1531,10 @@ int MyAnalysis::Cutflow_OSTau(const TauCand& OStau, int regions)
 //   if( !( SAME_SIGN_TAU_PAIRS || OStau.Charge       < 0            ))   return 0; cutflow.Pass(cutOSTauCharge          , regions);
 //   if(doDebug)    cout<<" OStau Charge pass - check! " << OStau.Charge <<", "<< regions << endl;
 
-  if( !(OStau.leadpfchargedhadrcandpt              > 0            ))   return 0; cutflow.Pass( cutOSTauChHadCandPt    , regions);
+  // if( !(OStau.leadpfchargedhadrcandpt              > 0            ))   return 0; cutflow.Pass( cutOSTauChHadCandPt    , regions);
 
-  if( !( OStau.PFChargedHadrCands_size ==1 && OStau.PFGammaCands_size == 0 ))  return 0; cutflow.Pass(cutOSTauDecayModeFinding, regions);
-  //if( !( OStau.decayModeFinding                                   ))   return 0; cutflow.Pass(cutOSTauDecayModeFinding, regions);
+  //if( !( OStau.PFChargedHadrCands_size ==1 && OStau.PFGammaCands_size == 0 ))  return 0; cutflow.Pass(cutOSTauDecayModeFinding, regions);
+  if( !( OStau.decayModeFindingOldDMs                                   ))   return 0; cutflow.Pass(cutOSTauDecayModeFinding, regions);
   if(doDebug)    cout<<" OStau decaymodeFinding pass - check! " << regions << endl;
 
   if( CAPPED_FAKERATES && OStau.Iso3Hits            > 10.          )   return 0;
@@ -1571,10 +1573,10 @@ int MyAnalysis::Cutflow_SSTau(const TauCand& OStau, const TauCand& SStau, int re
   //     (SAME_SIGN_TAU_PAIRS && SStau.Charge * OStau.Charge > 0) ))   return 0; cutflow.Pass(cutSSTauCharge          , regions);
   //   if(doDebug)    cout<<" SStau Charge pass - check! " << regions << endl;
 
-  if( !(SStau.leadpfchargedhadrcandpt              > 0            ))   return 0; cutflow.Pass( cutSSTauChHadCandPt    , regions);
+  //  if( !(SStau.leadpfchargedhadrcandpt              > 0            ))   return 0; cutflow.Pass( cutSSTauChHadCandPt    , regions);
 
-  if( !( SStau.PFChargedHadrCands_size ==1 && SStau.PFGammaCands_size == 0 ))  return 0; cutflow.Pass(cutSSTauDecayModeFinding, regions);
-  //if( !( SStau.decayModeFinding                                   ))   return 0; cutflow.Pass(cutSSTauDecayModeFinding, regions);
+  //if( !( SStau.PFChargedHadrCands_size ==1 && SStau.PFGammaCands_size == 0 ))  return 0; cutflow.Pass(cutSSTauDecayModeFinding, regions);
+  if( !( SStau.decayModeFindingOldDMs                                   ))   return 0; cutflow.Pass(cutSSTauDecayModeFinding, regions);
   if(doDebug) cout<<" SSTau decayModeFinding pass - check! " << regions << endl;
 
   if( CAPPED_FAKERATES && SStau.Iso3Hits            > 10.          )   return 0;
@@ -1591,8 +1593,64 @@ int MyAnalysis::Cutflow_SSTau(const TauCand& OStau, const TauCand& SStau, int re
   if(!(TMath::Abs(SStau.Dxy)                        < 0.2         ))   return 0; cutflow.Pass(cutSSTauDxy             , regions);
   if(doDebug)    cout<<" SStau Dxy pass - check! " << regions << endl;
 
-  if( !( SStau.*OSTauWP.ANTIMU_FLAG                                                ))   return 0; cutflow.Pass(cutSSTauAntiMu, regions);
-  if( !( SStau.*OSTauWP.ANTIE_FLAG                                                 ))   return 0; cutflow.Pass(cutSSTauAntiE, regions);
+  if( !( SStau.*SSTauWP.ANTIMU_FLAG                                                ))   return 0; cutflow.Pass(cutSSTauAntiMu, regions);
+  if( !( SStau.*SSTauWP.ANTIE_FLAG                                                 ))   return 0; cutflow.Pass(cutSSTauAntiE, regions);
+  cutflow.Pass(cutSSTauIsolation, regions);
+  return regions;
+}
+
+
+int MyAnalysis::Cutflow_OSTau_Christian(const TauCand& OStau, int regions)
+{
+  if(doDebug)  cout<<"inside CutFlow_OSTAU"<< endl;
+
+  if( !( OStau.Pt()                                > SUBTAU_PT_CUT))   return 0; cutflow.Pass(cutOSTauPt              , regions);
+  if(doDebug)    cout<<" OStau pt pass - check! " << OStau.Pt() <<", " << regions << endl;
+
+  if( !( TMath::Abs(OStau.Eta())                   < 2.1          ))   return 0; cutflow.Pass(cutOSTauEta             , regions);
+  if(doDebug)    cout<<" OStau Eta pass - check! " << OStau.Eta() <<", " << regions << endl;
+
+  if( !( OStau.decayModeFindingOldDMs                                   ))   return 0; cutflow.Pass(cutOSTauDecayModeFinding, regions);
+  if(doDebug)    cout<<" OStau decaymodeFinding pass - check! " << regions << endl;
+
+  if( !( OStau.*OSTauWP.ISOLATION_FLAG                            ))   return 0; cutflow.Pass(cutOSTauIsolation        , regions);
+  if(doDebug)    cout<<" OStau isolation ("<< OSTauWP.ISOLATION_FLAG <<") pass - check! "<< regions << endl;
+  
+  if( !( OStau.*OSTauWP.ISOLATION_FLAG                            ))   regions &= ~(def.SIGNAL  | def.BACKGROUND         );   
+  else                                                                 regions &= ~(def.CONTROL | def.CONTROL_BACKGROUND );
+  if(doDebug)  cout<<"OStau --> (sig, bkg, cont, cont_bkg) : ("<< def.SIGNAL <<", "<< def.BACKGROUND<< ", "<< def.CONTROL <<", "<< def.CONTROL_BACKGROUND <<")"<< endl;
+
+//   if( !( OStau.*OSTauWP.ANTIMU_FLAG                                                ))   return 0; cutflow.Pass(cutOSTauAntiMu, regions);
+//   if( !( OStau.*OSTauWP.ANTIE_FLAG                                                 ))   return 0; cutflow.Pass(cutOSTauAntiE, regions);
+  
+  cutflow.Pass(cutOSTauIsolation, regions);
+  return regions;
+}
+
+
+int MyAnalysis::Cutflow_SSTau_Christian(const TauCand& OStau, const TauCand& SStau, int regions)
+{
+  if(doDebug)  cout<<"inside CutFlow_SSTAU"<< endl;
+  const double PT_CUT = (OStau.Pt() > LEADTAU_PT_CUT ? SUBTAU_PT_CUT : LEADTAU_PT_CUT);
+  if( !( SStau.Pt()                                > PT_CUT       ))   return 0; cutflow.Pass(cutSSTauPt              , regions);
+  if(doDebug)    cout<<" SStau pt pass - check! " << regions << endl;
+  
+  if( !( TMath::Abs(SStau.Eta())                   < 2.1          ))   return 0; cutflow.Pass(cutSSTauEta             , regions);
+  if(doDebug)    cout<<" SStau Eta pass - check! " << regions << endl;
+
+  if( !( SStau.decayModeFindingOldDMs                             ))   return 0; cutflow.Pass(cutSSTauDecayModeFinding, regions);
+  if(doDebug) cout<<" SSTau decayModeFinding pass - check! " << regions << endl;
+
+  if( !( SStau.*OSTauWP.ISOLATION_FLAG                            ))   return 0; cutflow.Pass(cutSSTauIsolation        , regions);
+  if(doDebug)    cout<<" SStau isolation passs - check!" << regions << endl;
+
+  if(!(SStau.*SSTauWP.ISOLATION_FLAG))                                 regions &= ~(def.SIGNAL     | def.CONTROL               );
+  else                                                                 regions &= ~(def.BACKGROUND | def.CONTROL_BACKGROUND    );
+  if(doDebug)  cout<<"SStau --> (sig, bkg, cont, cont_bkg) : ("<< def.SIGNAL <<", "<< def.BACKGROUND<< ", "<< def.CONTROL <<", "<< def.CONTROL_BACKGROUND <<")"<< endl;
+
+//   if( !( SStau.*SSTauWP.ANTIMU_FLAG                                                ))   return 0; cutflow.Pass(cutSSTauAntiMu, regions);
+//   if( !( SStau.*SSTauWP.ANTIE_FLAG                                                 ))   return 0; cutflow.Pass(cutSSTauAntiE, regions);
+  
   cutflow.Pass(cutSSTauIsolation, regions);
   return regions;
 }
@@ -2004,9 +2062,9 @@ void MyAnalysis::FillHistograms(const DiTau& ditau, bool mvaCut)
     tauOSIso3HitsMedium = OSTau.byMediumCombinedIsolationDeltaBetaCorr3Hits;
     tauOSIso3HitsTight = OSTau.byTightCombinedIsolationDeltaBetaCorr3Hits;
     tauOSAgainstElectronLoose = OSTau.againstElectronLoose;
-    tauOSAgainstElectronLooseMVA3 = OSTau.againstElectronLooseMVA3;
-    tauOSAgainstElectronMediumMVA3 = OSTau.againstElectronMediumMVA3;
-    tauOSAgainstElectronTightMVA3 = OSTau.againstElectronTightMVA3;
+    tauOSAgainstElectronLooseMVA3 = OSTau.byTightIsolationMVA3oldDMwLT;
+    tauOSAgainstElectronMediumMVA3 = OSTau.againstElectronMediumMVA5;
+    tauOSAgainstElectronTightMVA3 = OSTau.againstElectronTightMVA5;
     tauOSAgainstMuonLoose = OSTau.againstMuonLoose;
     tauOSAgainstMuonMedium = OSTau.againstMuonMedium;
     tauOSAgainstMuonTight = OSTau.againstMuonTight;
@@ -2019,9 +2077,9 @@ void MyAnalysis::FillHistograms(const DiTau& ditau, bool mvaCut)
     tauSSIso3HitsMedium = OSTau.byMediumCombinedIsolationDeltaBetaCorr3Hits;
     tauSSIso3HitsTight = OSTau.byTightCombinedIsolationDeltaBetaCorr3Hits;
     tauSSAgainstElectronLoose = OSTau.againstElectronLoose;
-    tauSSAgainstElectronLooseMVA3 = OSTau.againstElectronLooseMVA3;
-    tauSSAgainstElectronMediumMVA3 = OSTau.againstElectronMediumMVA3;
-    tauSSAgainstElectronTightMVA3 = OSTau.againstElectronTightMVA3;
+    tauSSAgainstElectronLooseMVA3 = OSTau.againstElectronLooseMVA5;
+    tauSSAgainstElectronMediumMVA3 = OSTau.againstElectronMediumMVA5;
+    tauSSAgainstElectronTightMVA3 = OSTau.againstElectronTightMVA5;
     tauSSAgainstMuonLoose = OSTau.againstMuonLoose;
     tauSSAgainstMuonMedium = OSTau.againstMuonMedium;
     tauSSAgainstMuonTight = OSTau.againstMuonTight;
