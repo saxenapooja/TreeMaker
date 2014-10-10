@@ -74,6 +74,7 @@ MyAnalysis::GenFilter string_to_filter(const std::string& str)
   throw std::runtime_error("Invalid Filter: " + str);
 }
 
+
 //Constructor:
 MyAnalysis::MyAnalysis(const Config& cfg,  const std::string& database): LOWPT_SKIM(cfg.get<bool>("lowpt_skim")),
 									 GEN_FILTER(string_to_filter(cfg.get<std::string>("gen_filter", "none")))
@@ -104,7 +105,6 @@ MyAnalysis::~MyAnalysis(){
   cout<<setw(20)<<"Selection"         <<setw(15)<<setprecision(5)<<" "            <<setw(15)<<"Efficiency"<<endl;
   cout<<setw(20)<<"nEv_Skim:"         <<setw(15)<<nEv_Skim      <<setw(15)<<1<<endl;                        //  
   cout<<"__________________________________________________"<<endl;
-  //cout<<setw(20)<<"Muons"             <<setw(15)<<nEV_muons     <<setw(15)<<nEV_muons/nEv_Skim<<endl;               //  
   cout<<setw(20)<<"Tau1"              <<setw(15)<<nEV_sub       <<setw(15)<<nEV_sub/nEv_Skim<<endl;
   cout<<setw(20)<<"Tau2"              <<setw(15)<<nEV_lead      <<setw(15)<<nEV_lead/nEV_sub<<endl;
   cout<<"__________________________________________________"<<endl;
@@ -320,41 +320,43 @@ Int_t MyAnalysis::AnalyseEvent() {
     }//if(GEN_FILTER != NONE)
 
   nEv_Skim++;
+  cout<<"nEv_Skim : "<< nEv_Skim << endl;
   if(!nEventsFromSkim)   nEvents->Fill(0.0);
   
+
   // loop over the taus
   std::vector< Tau > taus1;
   std::vector< Tau > taus2;
 
   //first tau
   for( unsigned int i = 0; i < NumTaus(); i++){
-
+    
     if( (LOWPT_SKIM
 	 && Taus(i).Pt() > 20.
 	 && Abs(Taus(i).Eta()) < 2.3
-	 && Taus(i).TauDiscriminator("decayModeFinding")==1
-	 && (Taus(i).TauDiscriminator("againstElectronLoose") == 1 || Taus(i).TauDiscriminator("againstElectronMVA") || Taus(i).TauDiscriminator("againstElectronVLooseMVA2") == 1 || Taus(i).TauDiscriminator("againstElectronLooseMVA3") == 1)
-	 && (Taus(i).TauDiscriminator("againstMuonLoose") == 1 || Taus(i).TauDiscriminator("againstMuonLoose2") == 1)
+	 && Taus(i).TauDiscriminator("decayModeFindingOldDMs")==1
+	 && (Taus(i).TauDiscriminator("againstElectronLoose") == 1 )
+	 && (Taus(i).TauDiscriminator("againstMuonLoose") == 1  )
 	 ) || (!LOWPT_SKIM
 	       && Taus(i).Pt() > 30.
 	       && Abs(Taus(i).Eta()) < 2.3
-	       && Taus(i).TauDiscriminator("decayModeFinding")==1
+	       && Taus(i).TauDiscriminator("decayModeFindingOldDMs")==1
 	       ))
       {
 	taus1.push_back(Taus(i));
-
+	
 	//second tau
 	for( unsigned int j = 0; j < NumTaus(); j++) if(i!=j) {
 	  if( (LOWPT_SKIM
                && Taus(j).Pt() > 25.
                && Abs(Taus(j).Eta()) < 2.3
-               && Taus(j).TauDiscriminator("decayModeFinding")==1
-               && (Taus(j).TauDiscriminator("againstElectronLoose") == 1 || Taus(j).TauDiscriminator("againstElectronMVA") || Taus(j).TauDiscriminator("againstElectronVLooseMVA2") == 1 || Taus(j).TauDiscriminator("againstElectronLooseMVA3") == 1)
+               && Taus(j).TauDiscriminator("decayModeFindingOldDMs")==1
+               && (Taus(j).TauDiscriminator("againstElectronLoose") == 1 || Taus(j).TauDiscriminator("againstElectronLooseMVA5") == 1)
                && (Taus(j).TauDiscriminator("againstMuonLoose") == 1 || Taus(j).TauDiscriminator("againstMuonLoose2") == 1)
 	       ) || (!LOWPT_SKIM
-		     && Taus(j).Pt() > 40.
+		     && Taus(j).Pt() > 30.
 		     && Abs(Taus(j).Eta()) < 2.3
-		     && Taus(j).TauDiscriminator("decayModeFinding")==1
+		     && Taus(j).TauDiscriminator("decayModeFindingOldDMs")==1
 		     ))
 	    {
 	      taus2.push_back(Taus(j));
@@ -382,6 +384,8 @@ Int_t MyAnalysis::AnalyseEvent() {
   if(doFilter && taus2.size() < 1 )    return(1);
   nEV_lead++;
   
+  std::cout<<"counts :"<< taus1.size() <<", "<< taus2.size() << std::endl;
+
   SkimEvent();
   return(1);
 }
