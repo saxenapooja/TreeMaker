@@ -15,8 +15,8 @@ FILEPATH=$COMMONFILEPATH/syncEx_tautau_Christian_Oct2014/output_crab/
 FILENAME=$FILEPATH/TTFH_MC_SUSYGluGluToHToTauTau_M-130_8TeV-pythia6-tauola
 
 # LUMI FILE
-LUMIPATH=$TOOLDIR/Lumi/new
-LUMIFILE=$LUMIPATH/LUMI_INFO_TTFH_MC_SUSYGluGluToHToTauTau_M-130_8TeV-pythia6-tauola
+LUMIPATH=$TOOLDIR/tau-hadronic/Lumi/new
+LUMIFILE=$LUMIPATH/LUMI_INFO_TTFH_MC_SUSYGluGluToHToTauTau_M-130_8TeV-pythia6-tauola.root
 
 # CONFIG FILE
 CONFIGPATH=$ANALYSISPATH/Config
@@ -80,7 +80,7 @@ MakeLib() {
 
 Skim() {
     make -B main_skim
-    ./main_skim $LUMIFILE"*.root" $FILENAME"*.root" $CONFIGSKIM/$GREP[18]
+    ./main_skim $LUMIFILE  $FILENAME $CONFIGSKIM/$GREP[18]
 }
 
 
@@ -90,15 +90,15 @@ Main() {
     ## detault config 
     if [ "$CONFIGDEFAULT" = "YES" ]; then
 	echo '@@@@@@@@@@@@@@@@@@@    USING DEFAULT CONFIG ::' $CONFIGDEFAULTFILE
-	./main $FILENAME"*root" $LUMIFILE"*.root"  $CONFIGDEFAULTFILE
-
+	./main "$FILENAME"*root  $LUMIFILE  $CONFIGDEFAULTFILE
+	#./main /nfs/dust/cms/user/pooja//samples//syncEx_tautau_Christian_Oct2014/output_crab//TTFH_MC_SUSYGluGluToHToTauTau_M-130_8TeV-pythia6-tauola_*root /nfs/dust/cms/user/pooja/scratch/plot-macro/tau-hadronic/Lumi/new/LUMI_INFO_TTFH_MC_SUSYGluGluToHToTauTau_M-130_8TeV-pythia6-tauola.root /nfs/dust/cms/user/pooja/scratch/plot-macro/tau-hadronic/h2tautau-analysis/Config/analysis/2012.cfg
     else
 	## using all config files
 	for ConfigFileIndx in "${GREP[@]}"
 	  do
 	  echo '@@@@@@@@@@@@@@@@@@@    USING FOLLOWING CONFIG ::' $ConfigFileIndx
            #echo "./main" $FILENAME"*root" $LUMIFILE"*.root" $CONFIGANALYSIS/$ConfigFileIndx
-	  ./main $FILENAME"*root" $LUMIFILE"*.root"   $CONFIGANALYSIS/$ConfigFileIndx
+	  ./main $FILENAME"*root" $LUMIFILE   $CONFIGANALYSIS/$ConfigFileIndx
 	  
 	  echo '@@@@@@@@@@@@@ Going to Sleep'
 	  sleep 5
