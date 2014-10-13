@@ -2,9 +2,10 @@
 #include "AnalysisTool/Analyse.h"
 #include "Common/Config.h"
 #include "Common/PileupWeight.h"
-#include "Common/FakeRateFunctions.h"
-#include "Common/Variable.h"
-#include "Common/MvaTree.h"
+//#include "Common/FakeRateFunctions.h"
+#include "Common/HistoCall.h"
+//#include "Common/MvaTree.h"
+#include "Common/CutFlowTree.h"
 #include "Common/MvaEvaluator.h"
 #include "Common/TauWP.h"
 #include "Common/diTauCand.h"
@@ -57,6 +58,8 @@ public:
   TTree *tree;
 
   Int_t   count;
+  Int_t   test_counter;
+  bool    doFillTree;
   Float_t angle;
   Float_t phiStar_gen;//[MaxCount];
   Float_t phiLab_gen; //[MaxCount];
@@ -109,6 +112,7 @@ private:
   const bool EARLY_MATCHING;
   const bool SAME_SIGN_TAU_PAIRS;
   const bool HIGHPT_SELECTION;
+  const bool ONLY_BEST_TRIPLET;
   const bool ONLY_BEST_DOUBLET;
   const bool INCLUSIVE_FAKERATES;
   const bool CAPPED_FAKERATES;
@@ -129,17 +133,9 @@ private:
 
   const PileupWeight puWeight;
   const METWeight    metWeight;
-//   const FakeRateFunctions fakeRateFuncsNormal;
-//   const FakeRateFunctions fakeRateFuncsInclusive;
-  const MvaEvaluator mvaEvaluatorBDT8_v1;
-  const MvaEvaluator mvaEvaluatorBDT8_v2;
-  const MvaEvaluator mvaEvaluatorBDT8_v3;
-  const MvaEvaluator mvaEvaluatorBDTG_v2;
-  const MvaEvaluator mvaEvaluatorBDT8Mt_v2;
-  const MvaEvaluator mvaEvaluatorBDTGMt_v2;
   const IrredMVA     irredMVA;
-  const CombinedMVA combinedMVA;
-
+  const CombinedMVA  combinedMVA;
+  //  const FakeRateFunctions fakeRateFuncsNormal;
 
 private:
   UInt_t currun;
@@ -267,14 +263,14 @@ private:
   // pile-up
   Double_t weight;
   // MVA tree
-  // MvaTree mvaTree;
+  CutFlowTree mvaTree;
   const char *sample;
   //  const diTau * DITAU;
   
 public:
-  struct DiTau {
+  struct triplet {
     int region;
-    //    unsigned int lep;
+    unsigned int lep;
     const TauCand* OStau;
     const TauCand* SStau;
     bool lepJetFake;
@@ -283,15 +279,15 @@ public:
     bool wjetsVetoMT;
     bool OSTauTrackFake;
     bool SSTauTrackFake;
-    MvaTree::Variables mvaVars;
+    CutFlowTree::Variables mvaVars;
     double mvaValue;
   };
   
-//   struct DiTau {
-//     int region;
-//     const TauCand* OStau;
-//     const TauCand* SStau;
-//   };
+  struct DiTau {
+    int region;
+    const TauCand* OStau;
+    const TauCand* SStau;
+  };
   
   MyAnalysis(const Config& config);
   virtual ~MyAnalysis();
@@ -315,10 +311,10 @@ public:
   bool hasMuon(const TauCand& OStau, const Muon& muon, int regions);
   bool hasEle(const TauCand& OStau, const Electron& ele, int regions);
   void SetSample(std::string flag);
-  //  void FillHistogramsFromTriplets(const std::vector<triplet>& triplets, bool mvaCut);
-  void FillHistogramsFromDoublets(const std::vector<DiTau>& doublets, bool mvaCut);
+  void FillHistogramsFromTriplets(const std::vector<triplet>& triplets, bool mvaCut);
+  void FillHistogramsFromDoublets(const std::vector<DiTau>& doublets);
   void FillHistograms(const DiTau& ditau);
-  void FillHistograms(const DiTau& ditau,  unsigned int n_doublets, bool mvaCut);
+  void FillHistograms(const DiTau& ditau,bool mvaCut);
   TLorentzVector MET() const;
   std::map<std::string, TH1F*>  CreateHistograms();
 
@@ -414,6 +410,7 @@ MyAnalysis::MyAnalysis(const Config& config) : Analyse(), currun(0), curlumi(0),
   EARLY_MATCHING(true),
   SAME_SIGN_TAU_PAIRS(config.get<bool>("same_sign_tau_pairs", false)),
   HIGHPT_SELECTION(config.get<bool>("highpt_selection", false)),
+  ONLY_BEST_TRIPLET(config.get<bool>("only_best_triplet", true)),
   ONLY_BEST_DOUBLET(config.get<bool>("only_best_triplet", true)),
   INCLUSIVE_FAKERATES(config.get<bool>("inclusive_fakerates", false)),
   CAPPED_FAKERATES(config.get<bool>("capped_fakerates", false)),
@@ -432,12 +429,14 @@ MyAnalysis::MyAnalysis(const Config& config) : Analyse(), currun(0), curlumi(0),
 
   puWeight(DATA_ERA.c_str()),
   metWeight(DATA_ERA.c_str(), "mu"),
-  mvaEvaluatorBDT8_v1("v1-std", "BDT8", "sane"),
-  mvaEvaluatorBDT8_v2("v2-std", "BDT8", "sane"),
-  mvaEvaluatorBDT8_v3("v3-std", "BDT8", "all"),
-  mvaEvaluatorBDTG_v2("v2-std", "BDTG", "sane"),
-  mvaEvaluatorBDT8Mt_v2("v2-std", "BDT8", "sane-plus-mt"),
-  mvaEvaluatorBDTGMt_v2("v2-std", "BDTG", "sane-plus-mt"),
+					       //  fakeRateFuncsNormal(config.get<std::string>("fakerate_directory", "plots").c_str(), DATA_ERA.c_str(), (std::string("wmuJetsSS") + (CAPPED_FAKERATES ? "Capped" : "") + "AgainstElecMu").c_str(), OSTauWP.antie_frfunc_name(), OSTauWP.isolation_frfunc_name(), SSTauWP.antie_frfunc_name(), SSTauWP.isolation_frfunc_name(), true, INCLUSIVE_FAKERATES, CAPPED_FAKERATES),
+  //  fakeRateFuncsInclusive(config.get<std::string>("fakerate_directory", "plots").c_str(), DATA_ERA.c_str(), (std::string("wmuJetsSS") + (CAPPED_FAKERATES ? "Capped" : "") + "AgainstElecMu").c_str(), OSTauWP.antie_frfunc_name(), OSTauWP.isolation_frfunc_name(), SSTauWP.antie_frfunc_name(), SSTauWP.isolation_frfunc_name(), true, true, CAPPED_FAKERATES),
+  //  mvaEvaluatorBDT8_v1("v1-std", "BDT8", "sane"),
+  //  mvaEvaluatorBDT8_v2("v2-std", "BDT8", "sane"),
+  //  mvaEvaluatorBDT8_v3("v3-std", "BDT8", "all"),
+  //  mvaEvaluatorBDTG_v2("v2-std", "BDTG", "sane"),
+  //  mvaEvaluatorBDT8Mt_v2("v2-std", "BDT8", "sane-plus-mt"),
+  //  mvaEvaluatorBDTGMt_v2("v2-std", "BDTG", "sane-plus-mt"),
   histfile(new TFile("plots/ditau.root", "RECREATE")),
   def(cutflow),
 
@@ -484,7 +483,8 @@ MyAnalysis::MyAnalysis(const Config& config) : Analyse(), currun(0), curlumi(0),
   pSubTauPtPtRatio(HISTOGRAMS, "pSubTauPtPtRatio", "Subtau pT vs. PtRatio", "p_{T}^{#tau2}", "GeV/c", "PtRatio", 200, 0.0, 200.0),
   pMETDeltaR(HISTOGRAMS, "pMETDeltaR", "MET vs. #DeltaR", "MET", "GeV/c", "DeltaR", 200, 0.0, 200.0),
   pMETPtRatio(HISTOGRAMS, "pMETPtRatio", "MET vs. PtRatio", "MET", "GeV/c", "PtRatio", 200, 0.0, 200.0),
-  pDeltaRPtRatio(HISTOGRAMS, "pDeltaRPtRatio", "#DeltaR vs. PtRatio", "#DeltaR", NULL, "PtRatio", 100, 0.0, 10.0)
+  pDeltaRPtRatio(HISTOGRAMS, "pDeltaRPtRatio", "#DeltaR vs. PtRatio", "#DeltaR", NULL, "PtRatio", 100, 0.0, 10.0),
+  mvaTree("mvaTree", "MVA Tree")
 {
   FillInfo::MASS_CUT = MASS_CUT;
   
@@ -734,7 +734,9 @@ Int_t MyAnalysis::AnalyzeEvent()
 {
   if(doDebug) cout<<"-----------------------------------------------------------------------------------------------"<< event << endl;
   count = 0;
-  
+  test_counter = 0;
+  doFillTree = false;
+
   // We start in all regions
   const int ALL_REGIONS = cutflow.AllRegions(); //15
   
@@ -760,12 +762,12 @@ Int_t MyAnalysis::AnalyzeEvent()
   if(!ENABLE_TRIGGER || mtrigger == 1) OK_Trigger = true;
   if(doDebug)  cout<<"Trigger condition is passed with : "<< OK_Trigger << endl;
 
-  std::vector<TauCand>    OStaus, SStaus ;
-  std::vector<TauCand>    L1taus, L2taus ; 
-  std::vector<Muon>       muons          ;
-  std::vector<DiTau>      doublet        ;
-  std::vector<DiTau>      finaldoublet   ;
-  std::vector<DiTau>      doublet_mva    ;
+  std::vector<TauCand>   OStaus, SStaus ;
+  std::vector<TauCand> L1taus, L2taus; 
+  std::vector<Muon>      muons;
+  std::vector<triplet>   triplets;
+  std::vector<triplet>   triplets_mva;
+  std::vector<DiTau>     doublet, finaldoublet;
   
   // Trigger pass
   if(OK_Trigger)
@@ -1110,6 +1112,7 @@ Int_t MyAnalysis::AnalyzeEvent()
 	} // if(ENABLE_MATCHING)
       // end of generator level studies
       
+      
       // ditau selection
       if(!ENABLE_MATCHING || !EARLY_MATCHING || haveEarlyMatch) 
 	{
@@ -1130,6 +1133,7 @@ Int_t MyAnalysis::AnalyzeEvent()
 	      } 
 	  } // VERTEX_STUDY
 	  
+
 	  //making sure primery vertex selection
 	  const int VERTEX_REGIONS = Cutflow_PV(ALL_REGIONS); //15
 	  if(doDebug) 	cout<<"VERTEX_REGIONS :"<< VERTEX_REGIONS << endl;
@@ -1173,57 +1177,34 @@ Int_t MyAnalysis::AnalyzeEvent()
 		      
 		      if(doDebug)    cout<<"@@@@   SECOND TAU SELECTED "<< endl;
 		      
-		      const int FINAL_REGIONS = SSTAU_REGIONS;  // Cutflow_FinalSelection(*best_doublet->OStau, *best_doublet->SStau, SSTAU_REGIONS);
+		      //const int FINAL_REGIONS = Cutflow_FinalSelection(OSTau, SSTau, SSTAU_REGIONS);
+		      const int FINAL_REGIONS = SSTAU_REGIONS; //Cutflow_FinalSelection(*best_doublet->OStau, *best_doublet->SStau, SSTAU_REGIONS);
 		      if(doDebug)   cout<<"FINAL_RGIONS "<< FINAL_REGIONS << endl;
 		      
 		      if(!FINAL_REGIONS) continue;
-		      //    if( (FINAL_REGIONS - 1) != 0 ) continue;
+		      //  if( (FINAL_REGIONS - 1) != 0 ) continue;
 		      
 		      // One doublet can only end up in one region
 		      assert((FINAL_REGIONS & (FINAL_REGIONS - 1)) == 0);
 		      
-		      // Compute MVA
-		      unsigned int nJets30 = 0;
-		      for (unsigned int k2 = 0; k2 < NumAK5PFJets(); ++k2)
-			{
-			  const Jet jet = AK5PFJets(k2);
-			  if(jet.Pt() > 30 && jet.Eta() < 2.5 && jet.puJetFullLoose())
-			      if(ROOT::Math::VectorUtil::DeltaR(jet, OSTau.p4) > 0.3)
-				if(ROOT::Math::VectorUtil::DeltaR(jet, SSTau.p4) > 0.3)
-				  ++nJets30;
-			}
+		      //fill vector
+		      DiTau ditau = {SSTAU_REGIONS, &OSTau, &SSTau};		    
+		      doublet.push_back(ditau); 
 		      
-		      const bool wjetsVetoMT = true;
-		      const bool OSTauTrackFake = false;
-		      const bool SSTauTrackFake = false;
-		      
-		      const bool case2 = !wjetsVetoMT && OSTauTrackFake;
-		      const MvaTree::Variables mvaVars(OSTau, SSTau, MET(), nJets30, FINAL_REGIONS, case2);
-		      const double mvaValue = mvaEvaluatorBDT8_v2.mvaValue(mvaVars.mvaVars);
-
-		      // keep selected ditau events
-		      DiTau selected_ditau = { FINAL_REGIONS, &OSTau, &SSTau, false, !(OSTau.*OSTauWP.ISOLATION_FLAG), !(SSTau.*SSTauWP.ISOLATION_FLAG), wjetsVetoMT, OSTauTrackFake, SSTauTrackFake, mvaVars, mvaValue };
-		      finaldoublet.push_back(selected_ditau);   // vector filling the ditau event
-		      if(doDebug)    cout<<"@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ TREE ENTRY IS BEING FILLED"<< endl;
-
-		      if(mvaValue > -0.170)
-			{
-			  cutflow.Pass(cutMVA, FINAL_REGIONS);
-			  doublet_mva.push_back(selected_ditau);
-			}
 		    } //  for(unsigned int k = 0; k < NumTaus(); ++k) if(j != k)
 		} // for(unsigned int j = 0; j < NumTaus(); ++j)
 	    } // if(VERTEX_REGIONS != 0)
 	} // if(!ENABLE_MATCHING || !EARLY_MATCHING || haveEarlyMatch)
     } //  if(OK_Trigger)
   
-  //fill histogram
-  FillHistogramsFromDoublets(finaldoublet, false);
-  FillHistogramsFromDoublets(doublet_mva, true);
-  
+  FillHistogramsFromDoublets(doublet);
+
+  //// fill histograms
+  // FillHistogramsFromTriplets(triplets    , false);
+  // FillHistogramsFromTriplets(triplets_mva, true );
+  // FillHistograms(finaldoublet);
   // cutflow.GetCutflow("Signal")->Print();
-
-
+  
 #if 0
   // WZ if(Number() == 711216|| Number() == 1412003)
   //if(Number() == 1121870|| Number() == 1937053|| Number() == 1882145|| Number() == 1982077|| Number() == 148464|| Number() == 316326|| Number() == 1083104)
@@ -1459,7 +1440,7 @@ int main(int argc, char* argv[])
   vimtrigger.push_back("HLT_DoubleMediumIsoPFTau35_Trk1_eta2p1_v*");
   ana.AddTriggerSelection("TauTrigger", vimtrigger);
   ana.GetTriggerSelection("TauTrigger")->PrintInfo();
-  ana.Loop(1, 2000);
+  ana.Loop();//1, 200);
 } //int main(int argc, char* argv[])
 
 
@@ -1494,17 +1475,17 @@ int MyAnalysis::Cutflow_PV(int regions)
 
 int MyAnalysis::Cutflow_Muon(int mu, int regions)
 {
-  if( !( Muons(mu).Pt()                                            > 24))                                return 0; cutflow.Pass(cutMuPt, regions);
-  if( !( TMath::Abs(Muons(mu).Eta())                               < 2.1))                               return 0; cutflow.Pass(cutMuEta, regions);
-  if( !( (Muons(mu).IsGlobal() && Muons(mu).IsPF())))                                                    return 0; cutflow.Pass(cutMuID, regions);
-  if( !( Muons(mu).NumStations()                                   >= 2))                                return 0; cutflow.Pass(cutMuNumStations, regions);
-  if( !( Muons(mu).NumChamberHits()                                >= 1))                                return 0; cutflow.Pass(cutMuNumChambers, regions);
-  if( !( Muons(mu).InnerTrack().NPixelLayers() + Muons(mu).InnerTrack().NStripLayers() > 5))             return 0; cutflow.Pass(cutMuNumLayers, regions);
-  if( !( Muons(mu).InnerTrack().NPixelHits()                       >= 1))                                return 0; cutflow.Pass(cutMuNumPixel, regions);
-  if( !( Muons(mu).Chi2OverNdof()                                  < 10.0))                              return 0; cutflow.Pass(cutMuChi2, regions);
-  if( !( TMath::Abs(Muons(mu).InnerTrack().Dxy())                  < 0.045))                              return 0; cutflow.Pass(cutMuDxy, regions);
-  if( !( TMath::Abs(Muons(mu).InnerTrack().Dz())                   < 0.2))                               return 0; cutflow.Pass(cutMuDz, regions);
-  if( !( Muons(mu).PFIsoR4RelDB()                                  < 0.1))                               return 0; cutflow.Pass(cutMuIso, regions);
+//   if( !( Muons(mu).Pt()                                            > 24))                                return 0; cutflow.Pass(cutMuPt, regions);
+//   if( !( TMath::Abs(Muons(mu).Eta())                               < 2.1))                               return 0; cutflow.Pass(cutMuEta, regions);
+//   if( !( (Muons(mu).IsGlobal() && Muons(mu).IsPF())))                                                    return 0; cutflow.Pass(cutMuID, regions);
+//   if( !( Muons(mu).NumStations()                                   >= 2))                                return 0; cutflow.Pass(cutMuNumStations, regions);
+//   if( !( Muons(mu).NumChamberHits()                                >= 1))                                return 0; cutflow.Pass(cutMuNumChambers, regions);
+//   if( !( Muons(mu).InnerTrack().NPixelLayers() + Muons(mu).InnerTrack().NStripLayers() > 5))             return 0; cutflow.Pass(cutMuNumLayers, regions);
+//   if( !( Muons(mu).InnerTrack().NPixelHits()                       >= 1))                                return 0; cutflow.Pass(cutMuNumPixel, regions);
+//   if( !( Muons(mu).Chi2OverNdof()                                  < 10.0))                              return 0; cutflow.Pass(cutMuChi2, regions);
+//   if( !( TMath::Abs(Muons(mu).InnerTrack().Dxy())                  < 0.045))                              return 0; cutflow.Pass(cutMuDxy, regions);
+//   if( !( TMath::Abs(Muons(mu).InnerTrack().Dz())                   < 0.2))                               return 0; cutflow.Pass(cutMuDz, regions);
+//   if( !( Muons(mu).PFIsoR4RelDB()                                  < 0.1))                               return 0; cutflow.Pass(cutMuIso, regions);
   return regions;
 }
 
@@ -1905,26 +1886,23 @@ int MyAnalysis::Cutflow_Combined(int mu, const TauCand& OStau, const TauCand& SS
   return regions;
 }
 
-void MyAnalysis::FillHistogramsFromDoublets(const std::vector<DiTau>& doublets, bool mvaCut)
+void MyAnalysis::FillHistogramsFromDoublets(const std::vector<DiTau>& doublets)
 {
-  if(doDebug)  cout<<"Inside filling loop for ehceking doublets" << endl;
+  if(doDebug)  cout<<"doublet size is : "<< doublets.size() << endl;
   const DiTau* best_doublet = NULL;
-  if(doDebug)  cout<<"doublets.size() :"<< doublets.size() << endl;
-  
-  for(unsigned int i = 0; i < doublets.size(); ++i) 
+  for(unsigned int i = 0; i < doublets.size(); ++i)
     {
-    if(!best_doublet || doublets[i].OStau->Pt() * doublets[i].SStau->Pt() > best_doublet->OStau->Pt() * best_doublet->SStau->Pt())
-      best_doublet = &doublets[i];
- 
-    if(!ONLY_BEST_DOUBLET)
-      FillHistograms(doublets[i], doublets.size(), mvaCut);
+      if(!best_doublet ||  doublets[i].OStau->Pt() * doublets[i].SStau->Pt() > best_doublet->OStau->Pt() * best_doublet->SStau->Pt())
+	best_doublet = &doublets[i];
     }
   
   if(ONLY_BEST_DOUBLET && best_doublet) 
-    FillHistograms(*best_doublet, doublets.size(), mvaCut);
+    FillHistograms(*best_doublet, false);//, doublets.size());
 }
 
-void MyAnalysis::FillHistograms(const DiTau& ditau, unsigned int n_doublets, bool mvaCut)
+
+//void MyAnalysis::FillHistograms(const triplet& trip, unsigned int n_triplets, bool mvaCut)
+void MyAnalysis::FillHistograms(const DiTau& ditau, bool mvaCut)
 {
   if(doDebug) cout<<"inside the FillHistograms(const DiTau& ditau, bool mvaCut) "<< endl;
   //  const Muon mu = Muons(trip.lep);
@@ -1964,21 +1942,28 @@ void MyAnalysis::FillHistograms(const DiTau& ditau, unsigned int n_doublets, boo
       outfile << "CTRLBKG Run_" << Run() << "_LS_" << LumiBlock() << "_Event_" << Number() << std::endl;
   }
 
-//   const FillInfo infoNormal(def, fakeRateFuncsNormal, mvaEvaluatorBDT8_v2, irredMVA, NULL, ditau.mvaVars, mvaCut, OSTau, SSTau);
-//   const FillInfo infoInclusive(def, fakeRateFuncsInclusive, mvaEvaluatorBDT8_v2, irredMVA, NULL, ditau.mvaVars, mvaCut, OSTau, SSTau);
-//   const FillInfo infoMETWeighted(def, fakeRateFuncsNormal, mvaEvaluatorBDT8_v2, irredMVA, &metWeight, ditau.mvaVars, mvaCut, OSTau, SSTau);
+  FillInfo infoNormal(def, OSTau, SSTau);
+  //   const FillInfo infoInclusive(def, fakeRateFuncsInclusive, mvaEvaluatorBDT8_v2, irredMVA, NULL, trip.mvaVars, mvaCut, mu, OSTau, SSTau);
+  //   const FillInfo infoMETWeighted(def, fakeRateFuncsNormal, mvaEvaluatorBDT8_v2, irredMVA, &metWeight, trip.mvaVars, mvaCut, mu, OSTau, SSTau);
+  
+  std::vector<const FillInfo*> infos;
+  infos.push_back(&infoNormal);
+  // infos.push_back(&infoInclusive);
+  // infos.push_back(&infoMETWeighted);
 
-//   std::vector<const FillInfo*> infos;
-//   infos.push_back(&infoNormal);
-//   infos.push_back(&infoInclusive);
-//   infos.push_back(&infoMETWeighted);
-#if 0
+
+//   // Log the event.
+//   if(!trip.lepJetFake && !trip.OSTauJetFake && !trip.SSTauJetFake && (trip.wjetsVetoMT || !trip.OSTauTrackFake || !trip.SSTauTrackFake))
+//   if(mvaVars.mvaVars.leadPt > 45.0 && mvaVars.mvaVars.subPt > 30.0 && mvaVars.mvaVars.Met > 20.0)
+//   outfile << "Run_" << Run() << "_LS_" << LumiBlock() << "_Event_" << Number() << std::endl;
+  
+  if(doDebug)  cout<<"filling the Event /variables"<< endl;
   // Event
   if(doDebug)  cout<<"First round"<< endl;
   vNPV.fill(NumGoodPrimVertices(), weight, infos);
   vMET.fill(MET().Et(), weight, infos);
   vMETTYPE1.fill(PFMETTYPE1().Et(), weight, infos);
-  //  vNTriplets.fill(n_doublets, weight, infos);
+  //  vNTriplets.fill(n_triplets, weight, infos);
   // Tau
   const double LeadTauPt  = OSTau.Pt() > SSTau.Pt() ? OSTau.Pt() : SSTau.Pt();
   const double SubTauPt   = OSTau.Pt() < SSTau.Pt() ? OSTau.Pt() : SSTau.Pt();
@@ -2010,13 +1995,7 @@ void MyAnalysis::FillHistograms(const DiTau& ditau, unsigned int n_doublets, boo
 //   vTauTauPtRatio.fill(ditau.mvaVars.mvaVars.ptRatio, weight, infos);
 //   vTauTauAngle.fill(ditau.mvaVars.mvaVars.angle, weight, infos);
   vTauTauSVfitMass.fill(SVfitMass, weight, infos);
-
   // Tau Tau Muon
-  const double mvaValue = mvaEvaluatorBDT8_v2.mvaValue(ditau.mvaVars.mvaVars);
-  vBDT8_v2.fill(mvaValue, weight, infos);
-  vIrredMVA.fill(infoNormal.irredMVAValue, weight, infos);
-  vCombinedMVA.fill(combinedMVA.mvaValue(ditau.mvaValue, infoNormal.irredMVAValue), weight, infos);
-  
   //vBDT8_v1.fill(mvaEvaluatorBDT8_v1.mvaValue(mvaVars.mvaVars), weight, infos);
   //const double mvaValue = mvaEvaluatorBDT8_v2.mvaValue(trip.mvaVars.mvaVars);
   //vBDT8_v2.fill(mvaValue, weight, infos);
@@ -2038,9 +2017,9 @@ void MyAnalysis::FillHistograms(const DiTau& ditau, unsigned int n_doublets, boo
 //   pMETDeltaR.fill(Variable<TProfile>::Filler(MET().Pt(), ditau.mvaVars.mvaVars.deltaRDiTau), weight, infos);
 //   pMETPtRatio.fill(Variable<TProfile>::Filler(MET().Pt(), ditau.mvaVars.mvaVars.ptRatio), weight, infos);
   //pDeltaRPtRatio.fill(Variable<TProfile>::Filler(trip.mvaVars.mvaVars.deltaRDiTau, trip.mvaVars.mvaVars.ptRatio), weight, infos);
-#endif
+
   // MVA Tree
-  //  if(!mvaCut) mvaTree.fill(ditau.mvaVars, mvaValue, weight);
+  // if(!mvaCut) mvaTree.fill(trip.mvaVars, mvaValue, weight);
   
   if(!mvaCut && (ditau.region & def.SIGNAL))
   {
@@ -2150,13 +2129,12 @@ void MyAnalysis::FillHistograms(const DiTau& ditau)
   PVr = sqrt(pow(PrimVertex().x(),2)+pow(PrimVertex().y(),2));
   
   tree->Fill();
-} // FillHistograms(const triplet& trip, unsigned int n_doublets)
+} // FillHistograms(const triplet& trip, unsigned int n_triplets)
 
 #if 0
 void MyAnalysis::FillHistogramsFromTriplets(const std::vector<triplet>& triplets, bool mvaCut)
 {
-  const triplet* best_triplet = NULL;to-line
-
+  const triplet* best_triplet = NULL;
   for(unsigned int i = 0; i < triplets.size(); ++i)
     {
       if(!best_triplet || 
